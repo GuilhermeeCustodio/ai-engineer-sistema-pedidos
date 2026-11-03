@@ -1,94 +1,167 @@
 
-# Sistema de Análise de Pedidos - V2
+# SISTEMA DE PEDIDOS V3
+# Aula 4 - Funções e Modularização
 
-# 1. Dados do cliente
-nome = input("Digite seu nome: ")
-cliente_vip = input("O cliente é VIP? (s/n): ").strip().lower() == "s"
 
-# 2. Carrinho de compras
-carrinho = [
-    {
-        "nome": "Notebook",
-        "preco": 2500.00,
-        "quantidade": 1
-    },
-    {
-        "nome": "Mouse",
-        "preco": 80.00,
-        "quantidade": 2
-    },
-    {
-        "nome": "Teclado",
-        "preco": 150.00,
-        "quantidade": 1
-    },
-    {
-        "nome": "Monitor",
-        "preco": 700.00,
-        "quantidade": 1
-    }
-]
+# 1. Calcular subtotal de um produto
+def calcular_subtotal(preco, quantidade):
+    return preco * quantidade
 
-# 3. Validar os produtos
-for produto in carrinho:
-    if produto["preco"] < 0:
-        raise ValueError(
-            f"Preço inválido para o produto {produto['nome']}"
+
+# 2. Calcular percentual de desconto
+def calcular_desconto(total, cliente_vip):
+    if total >= 200:
+        desconto = 0.10
+    elif total >= 100:
+        desconto = 0.05
+    else:
+        desconto = 0.00
+
+    if cliente_vip:
+        desconto += 0.05
+
+    return desconto
+
+
+# 3. Calcular frete
+def calcular_frete(total_com_desconto):
+    if total_com_desconto < 150:
+        return 20.00
+    else:
+        return 0.00
+
+
+# 4. Validar os produtos
+def validar_produtos(carrinho):
+    for produto in carrinho:
+        if produto["preco"] < 0:
+            raise ValueError(
+                f"Preço inválido para o produto {produto['nome']}"
+            )
+
+        if produto["quantidade"] <= 0:
+            raise ValueError(
+                f"Quantidade inválida para o produto {produto['nome']}"
+            )
+
+
+# 5. Calcular total original do carrinho
+def calcular_total_carrinho(carrinho):
+    total = 0
+
+    for produto in carrinho:
+        subtotal = calcular_subtotal(
+            produto["preco"],
+            produto["quantidade"]
         )
+        total += subtotal
 
-    if produto["quantidade"] <= 0:
-        raise ValueError(
-            f"Quantidade inválida para o produto {produto['nome']}"
-        )
+    return total
 
-# 4. Calcular o total do carrinho
-total = 0
 
-print("\n--- PRODUTOS DO PEDIDO ---")
+# 6. Calcular pedido completo
+def calcular_pedido(carrinho, cliente):
+    validar_produtos(carrinho)
 
-for produto in carrinho:
-    subtotal = produto["preco"] * produto["quantidade"]
-    total += subtotal
+    total = calcular_total_carrinho(carrinho)
 
-    print(
-        f"Produto: {produto['nome']} | "
-        f"Preço: R$ {produto['preco']:.2f} | "
-        f"Quantidade: {produto['quantidade']} | "
-        f"Subtotal: R$ {subtotal:.2f}"
+    percentual_desconto = calcular_desconto(
+        total,
+        cliente["cliente_vip"]
     )
 
-# 5. Calcular o desconto normal
-if total >= 200:
-    desconto = 0.10
-elif total >= 100:
-    desconto = 0.05
-else:
-    desconto = 0
+    valor_desconto = total * percentual_desconto
+    total_com_desconto = total - valor_desconto
 
-# 6. Aplicar desconto adicional VIP
-if cliente_vip:
-    desconto += 0.05
+    frete = calcular_frete(total_com_desconto)
+    valor_final = total_com_desconto + frete
 
-# 7. Calcular o valor com desconto
-valor_desconto = total * desconto
-total_com_desconto = total - valor_desconto
+    return {
+        "total": total,
+        "percentual_desconto": percentual_desconto,
+        "valor_desconto": valor_desconto,
+        "total_com_desconto": total_com_desconto,
+        "frete": frete,
+        "valor_final": valor_final
+    }
 
-# 8. Calcular o frete
-if total_com_desconto < 150:
-    frete = 20
-else:
-    frete = 0
 
-# 9. Calcular o valor final
-valor_final = total_com_desconto + frete
+# 7. Exibir resumo do pedido
+def exibir_resumo(cliente, carrinho, pedido):
+    print("\n--- RESUMO DO PEDIDO ---")
+    print(f"Cliente: {cliente['nome']}")
+    print(
+        f"Cliente VIP: "
+        f"{'Sim' if cliente['cliente_vip'] else 'Não'}"
+    )
 
-# 10. Exibir resumo do pedido
-print("\n--- RESUMO DO PEDIDO ---")
-print(f"Cliente: {nome}")
-print(f"Cliente VIP: {'Sim' if cliente_vip else 'Não'}")
-print(f"Total original: R$ {total:.2f}")
-print(f"Percentual de desconto: {desconto * 100:.0f}%")
-print(f"Valor do desconto: R$ {valor_desconto:.2f}")
-print(f"Total com desconto: R$ {total_com_desconto:.2f}")
-print(f"Frete: R$ {frete:.2f}")
-print(f"Valor final: R$ {valor_final:.2f}")
+    print("\n--- PRODUTOS ---")
+
+    for produto in carrinho:
+        subtotal = calcular_subtotal(
+            produto["preco"],
+            produto["quantidade"]
+        )
+
+        print(
+            f"{produto['nome']} | "
+            f"Quantidade: {produto['quantidade']} | "
+            f"Subtotal: R$ {subtotal:.2f}"
+        )
+
+    print("\n--- VALORES ---")
+    print(f"Total original: R$ {pedido['total']:.2f}")
+    print(
+        f"Desconto: "
+        f"{pedido['percentual_desconto'] * 100:.0f}%"
+    )
+    print(
+        f"Valor descontado: "
+        f"R$ {pedido['valor_desconto']:.2f}"
+    )
+    print(
+        f"Total com desconto: "
+        f"R$ {pedido['total_com_desconto']:.2f}"
+    )
+    print(f"Frete: R$ {pedido['frete']:.2f}")
+    print(f"Valor final: R$ {pedido['valor_final']:.2f}")
+
+
+# 8. Função principal
+def main():
+    cliente = {
+        "nome": "Guilherme",
+        "cliente_vip": True
+    }
+
+    carrinho = [
+        {
+            "nome": "Notebook",
+            "preco": 2500.00,
+            "quantidade": 1
+        },
+        {
+            "nome": "Mouse",
+            "preco": 80.00,
+            "quantidade": 2
+        },
+        {
+            "nome": "Teclado",
+            "preco": 150.00,
+            "quantidade": 1
+        },
+        {
+            "nome": "Monitor",
+            "preco": 700.00,
+            "quantidade": 1
+        }
+    ]
+
+    pedido = calcular_pedido(carrinho, cliente)
+
+    exibir_resumo(cliente, carrinho, pedido)
+
+
+# 9. Executar apenas quando o arquivo for iniciado diretamente
+if __name__ == "__main__":
+    main()
