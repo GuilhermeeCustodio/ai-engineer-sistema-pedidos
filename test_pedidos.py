@@ -7,6 +7,9 @@ from main import (
     calcular_frete,
     calcular_total_carrinho,
     calcular_pedido,
+    adicionar_produto,
+    remover_produto,
+    listar_produtos,
 )
 
 
@@ -37,7 +40,7 @@ def test_total_carrinho():
 
 
 def test_pedido_vip():
-    cliente = {"nome": "Guilherme", "cliente_vip": True}
+    cliente = {"nome": "Teste", "cliente_vip": True}
 
     carrinho = [
         {"nome": "Notebook", "preco": 2500, "quantidade": 1}
@@ -45,11 +48,11 @@ def test_pedido_vip():
 
     pedido = calcular_pedido(carrinho, cliente)
 
-    assert pedido["valor_final"] == 2125
+    assert pedido["valor_final"] == pytest.approx(2125)
 
 
 def test_preco_negativo():
-    cliente = {"nome": "Guilherme", "cliente_vip": False}
+    cliente = {"nome": "Teste", "cliente_vip": False}
 
     carrinho = [
         {"nome": "Mouse", "preco": -10, "quantidade": 1}
@@ -60,7 +63,7 @@ def test_preco_negativo():
 
 
 def test_quantidade_zero():
-    cliente = {"nome": "Guilherme", "cliente_vip": False}
+    cliente = {"nome": "Teste", "cliente_vip": False}
 
     carrinho = [
         {"nome": "Mouse", "preco": 80, "quantidade": 0}
@@ -68,3 +71,74 @@ def test_quantidade_zero():
 
     with pytest.raises(ValueError):
         calcular_pedido(carrinho, cliente)
+
+
+def test_carrinho_vazio():
+    cliente = {"nome": "Teste", "cliente_vip": False}
+
+    with pytest.raises(ValueError):
+        calcular_pedido([], cliente)
+
+
+def test_adicionar_produto(monkeypatch):
+    carrinho = []
+
+    entradas = iter(["Mouse", "80", "2"])
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda _: next(entradas)
+    )
+
+    adicionar_produto(carrinho)
+
+    assert len(carrinho) == 1
+    assert carrinho[0]["nome"] == "Mouse"
+    assert carrinho[0]["quantidade"] == 2
+
+
+def test_remover_produto(monkeypatch):
+    carrinho = [
+        {"nome": "Notebook", "preco": 2500, "quantidade": 1},
+        {"nome": "Mouse", "preco": 80, "quantidade": 2}
+    ]
+
+    monkeypatch.setattr("builtins.input", lambda _: "2")
+
+    remover_produto(carrinho)
+
+    assert len(carrinho) == 1
+    assert carrinho[0]["nome"] == "Notebook"
+
+
+def test_listar_carrinho_vazio(capsys):
+    listar_produtos([])
+
+    saida = capsys.readouterr().out
+
+    assert "Carrinho vazio!" in saida
+
+
+def test_adicionar_preco_invalido(monkeypatch):
+    carrinho = []
+
+    entradas = iter(["Mouse", "abc", "2"])
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda _: next(entradas)
+    )
+
+    adicionar_produto(carrinho)
+
+    assert carrinho == []
+
+
+def test_remover_numero_invalido(monkeypatch):
+    carrinho = [
+        {"nome": "Mouse", "preco": 80, "quantidade": 1}
+    ]
+
+    monkeypatch.setattr("builtins.input", lambda _: "abc")
+
+    remover_produto(carrinho)
+
+    assert len(carrinho) == 1
