@@ -1,13 +1,13 @@
 
-# SISTEMA DE PEDIDOS V4
-# Aula 5 - Estruturas de repetição e coleções
+# SISTEMA DE PEDIDOS V5
+# Aula 6 - Tratamento de erros e exceções
 
 import math
 
 
 # 1. Exibir o menu
 def exibir_menu():
-    print("\n==== SISTEMA DE PEDIDOS V4 ====")
+    print("\n==== SISTEMA DE PEDIDOS V5 ====")
     print("1. Adicionar produto ao carrinho")
     print("2. Listar produtos no carrinho")
     print("3. Remover produto")
@@ -37,7 +37,54 @@ def validar_produtos(carrinho):
             )
 
 
-# 4. Adicionar produto ao carrinho
+# 4. Ler e validar o preço
+def ler_preco():
+    while True:
+        try:
+            preco = float(
+                input("Digite o preço do produto: ")
+            )
+
+            if not math.isfinite(preco) or preco < 0:
+                print(
+                    "Preço inválido! Digite um valor "
+                    "maior ou igual a zero."
+                )
+                continue
+
+            return preco
+
+        except ValueError:
+            print(
+                "Entrada inválida! Digite um número válido."
+            )
+
+
+# 5. Ler e validar a quantidade
+def ler_quantidade():
+    while True:
+        try:
+            quantidade = int(
+                input("Digite a quantidade desejada: ")
+            )
+
+            if quantidade <= 0:
+                print(
+                    "Quantidade inválida! Digite um "
+                    "número maior que zero."
+                )
+                continue
+
+            return quantidade
+
+        except ValueError:
+            print(
+                "Quantidade inválida! "
+                "Digite um número inteiro."
+            )
+
+
+# 6. Adicionar produto ao carrinho
 def adicionar_produto(carrinho):
     nome = input("Digite o nome do produto: ").strip()
 
@@ -45,16 +92,9 @@ def adicionar_produto(carrinho):
         print("O nome do produto não pode ficar vazio.")
         return
 
-    try:
-        preco = float(input("Preço do produto: "))
-        quantidade = int(input("Quantidade: "))
-    except ValueError:
-        print("Digite um preço e uma quantidade válidos.")
-        return
-
-    if not math.isfinite(preco) or preco < 0 or quantidade <= 0:
-        print("Preço ou quantidade inválidos.")
-        return
+    # Reutilizando as funções da Aula 6
+    preco = ler_preco()
+    quantidade = ler_quantidade()
 
     produto = {
         "nome": nome,
@@ -63,10 +103,11 @@ def adicionar_produto(carrinho):
     }
 
     carrinho.append(produto)
+
     print("Produto adicionado ao carrinho com sucesso!")
 
 
-# 5. Listar produtos no carrinho
+# 7. Listar produtos no carrinho
 def listar_produtos(carrinho):
     if not carrinho:
         print("Carrinho vazio!")
@@ -88,7 +129,7 @@ def listar_produtos(carrinho):
         )
 
 
-# 6. Remover produto do carrinho
+# 8. Remover produto do carrinho
 def remover_produto(carrinho):
     if not carrinho:
         print("Carrinho vazio!")
@@ -100,6 +141,7 @@ def remover_produto(carrinho):
         numero = int(
             input("Digite o número do produto para remover: ")
         )
+
     except ValueError:
         print("Digite um número válido.")
         return
@@ -111,11 +153,12 @@ def remover_produto(carrinho):
             f"Produto '{produto_removido['nome']}' "
             f"removido com sucesso!"
         )
+
     else:
         print("Número inválido!")
 
 
-# 7. Calcular total original do carrinho
+# 9. Calcular total original do carrinho
 def calcular_total_carrinho(carrinho):
     total = 0
 
@@ -124,17 +167,20 @@ def calcular_total_carrinho(carrinho):
             produto["preco"],
             produto["quantidade"]
         )
+
         total += subtotal
 
     return total
 
 
-# 8. Calcular percentual de desconto
+# 10. Calcular percentual de desconto
 def calcular_desconto(total, cliente_vip):
     if total >= 200:
         desconto = 0.10
+
     elif total >= 100:
         desconto = 0.05
+
     else:
         desconto = 0.00
 
@@ -144,7 +190,7 @@ def calcular_desconto(total, cliente_vip):
     return desconto
 
 
-# 9. Calcular frete
+# 11. Calcular frete
 def calcular_frete(total_com_desconto):
     if total_com_desconto < 150:
         return 20.00
@@ -152,7 +198,7 @@ def calcular_frete(total_com_desconto):
     return 0.00
 
 
-# 10. Calcular pedido completo
+# 12. Calcular pedido completo
 def calcular_pedido(carrinho, cliente):
     if not carrinho:
         raise ValueError(
@@ -169,9 +215,11 @@ def calcular_pedido(carrinho, cliente):
     )
 
     valor_desconto = total * percentual_desconto
+
     total_com_desconto = total - valor_desconto
 
     frete = calcular_frete(total_com_desconto)
+
     valor_final = total_com_desconto + frete
 
     return {
@@ -184,10 +232,12 @@ def calcular_pedido(carrinho, cliente):
     }
 
 
-# 11. Exibir resumo do pedido
+# 13. Exibir resumo do pedido
 def exibir_resumo(cliente, carrinho, pedido):
     print("\n===== RESUMO DO PEDIDO =====")
+
     print(f"Cliente: {cliente['nome']}")
+
     print(
         f"Cliente VIP: "
         f"{'Sim' if cliente['cliente_vip'] else 'Não'}"
@@ -196,28 +246,38 @@ def exibir_resumo(cliente, carrinho, pedido):
     listar_produtos(carrinho)
 
     print("\n--- VALORES ---")
-    print(f"Total original: R$ {pedido['total']:.2f}")
+
+    print(
+        f"Total original: R$ {pedido['total']:.2f}"
+    )
+
     print(
         f"Desconto: "
         f"{pedido['percentual_desconto'] * 100:.0f}%"
     )
+
     print(
         f"Valor descontado: "
         f"R$ {pedido['valor_desconto']:.2f}"
     )
+
     print(
         f"Total com desconto: "
         f"R$ {pedido['total_com_desconto']:.2f}"
     )
+
     print(f"Frete: R$ {pedido['frete']:.2f}")
-    print(f"Valor final: R$ {pedido['valor_final']:.2f}")
+
+    print(
+        f"Valor final: R$ {pedido['valor_final']:.2f}"
+    )
 
 
-# 12. Função principal
+# 14. Função principal
 def main():
     carrinho = []
 
-    print("Bem-vindo ao Sistema de Pedidos V4!")
+    print("Bem-vindo ao Sistema de Pedidos V5!")
 
     nome = input("Digite seu nome: ").strip()
 
@@ -243,7 +303,9 @@ def main():
     while True:
         exibir_menu()
 
-        opcao = input("Escolha uma opção: ").strip()
+        opcao = input(
+            "Escolha uma opção: "
+        ).strip()
 
         if opcao == "1":
             adicionar_produto(carrinho)
@@ -262,10 +324,25 @@ def main():
                 )
                 continue
 
-            pedido = calcular_pedido(carrinho, cliente)
-            exibir_resumo(cliente, carrinho, pedido)
+            try:
+                pedido = calcular_pedido(
+                    carrinho,
+                    cliente
+                )
 
-            print("\nPedido finalizado com sucesso!")
+            except ValueError as erro:
+                print(f"Erro ao finalizar pedido: {erro}")
+                continue
+
+            exibir_resumo(
+                cliente,
+                carrinho,
+                pedido
+            )
+
+            print(
+                "\nPedido finalizado com sucesso!"
+            )
             break
 
         elif opcao == "5":
@@ -273,9 +350,11 @@ def main():
             break
 
         else:
-            print("Opção inválida. Tente novamente.")
+            print(
+                "Opção inválida. Tente novamente."
+            )
 
 
-# 13. Iniciar o programa
+# 15. Iniciar o programa
 if __name__ == "__main__":
     main()
