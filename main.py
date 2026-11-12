@@ -3,16 +3,24 @@
 # Aula 6 - Tratamento de erros e exceções
 
 import math
+from test_persistencia import (
+    salvar_pedido,
+    exibir_historico,
+    exportar_pedidos_csv,
+    ARQUIVO_JSON,
+)
 
 
 # 1. Exibir o menu
 def exibir_menu():
-    print("\n==== SISTEMA DE PEDIDOS V5 ====")
+    print("\n==== SISTEMA DE PEDIDOS V6 ====")
     print("1. Adicionar produto ao carrinho")
     print("2. Listar produtos no carrinho")
     print("3. Remover produto")
     print("4. Finalizar pedido")
-    print("5. Sair")
+    print("5. Consultar historico")
+    print("6. Exportar pedidos CSV")
+    print("7. Sair")
 
 
 # 2. Calcular subtotal de um produto
@@ -274,20 +282,21 @@ def exibir_resumo(cliente, carrinho, pedido):
 
 
 # 14. Função principal
+
 def main():
     carrinho = []
 
-    print("Bem-vindo ao Sistema de Pedidos V5!")
+    print("Bem-vindo ao Sistema de Pedidos V6!")
 
     nome = input("Digite seu nome: ").strip()
 
     while not nome:
-        print("O nome não pode ficar vazio.")
+        print("O nome nao pode ficar vazio.")
         nome = input("Digite seu nome: ").strip()
 
     while True:
         resposta = input(
-            "É cliente VIP? (s/n): "
+            "E cliente VIP? (s/n): "
         ).strip().lower()
 
         if resposta in ("s", "n"):
@@ -303,9 +312,7 @@ def main():
     while True:
         exibir_menu()
 
-        opcao = input(
-            "Escolha uma opção: "
-        ).strip()
+        opcao = input("Escolha uma opcao: ").strip()
 
         if opcao == "1":
             adicionar_produto(carrinho)
@@ -319,42 +326,76 @@ def main():
         elif opcao == "4":
             if not carrinho:
                 print(
-                    "Não é possível finalizar "
+                    "Nao e possivel finalizar "
                     "um carrinho vazio."
                 )
                 continue
 
             try:
-                pedido = calcular_pedido(
+                resumo = calcular_pedido(
                     carrinho,
                     cliente
                 )
 
+                registro = {
+                    "cliente": cliente.copy(),
+                    "produtos": [
+                        produto.copy()
+                        for produto in carrinho
+                    ],
+                    "resumo": resumo
+                }
+
+                numero = salvar_pedido(registro)
+
             except ValueError as erro:
-                print(f"Erro ao finalizar pedido: {erro}")
+                print(f"Erro de validacao: {erro}")
+                continue
+
+            except OSError as erro:
+                print(f"Erro ao salvar o pedido: {erro}")
                 continue
 
             exibir_resumo(
                 cliente,
                 carrinho,
-                pedido
+                resumo
             )
 
             print(
-                "\nPedido finalizado com sucesso!"
+                f"\nPedido numero {numero} "
+                "salvo com sucesso!"
             )
+
             break
 
         elif opcao == "5":
+            try:
+                exibir_historico()
+
+            except (ValueError, OSError) as erro:
+                print(f"Erro ao consultar historico: {erro}")
+
+        elif opcao == "6":
+            try:
+                quantidade = exportar_pedidos_csv()
+
+                if quantidade > 0:
+                    print(
+                        f"{quantidade} linhas exportadas "
+                        "para CSV com sucesso!"
+                    )
+
+            except (ValueError, OSError) as erro:
+                print(f"Erro ao exportar CSV: {erro}")
+
+        elif opcao == "7":
             print("Saindo do sistema...")
             break
 
         else:
-            print(
-                "Opção inválida. Tente novamente."
-            )
+            print("Opcao invalida. Tente novamente.")
 
 
-# 15. Iniciar o programa
 if __name__ == "__main__":
     main()

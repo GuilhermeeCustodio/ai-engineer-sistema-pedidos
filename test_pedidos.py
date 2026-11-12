@@ -1,247 +1,154 @@
 
+import csv
+import json
+
 import pytest
 
-from main import (
-    calcular_subtotal,
-    calcular_desconto,
-    calcular_frete,
-    calcular_total_carrinho,
-    calcular_pedido,
-    adicionar_produto,
-    remover_produto,
-    listar_produtos,
-    ler_preco,
-    ler_quantidade,
+from persistencia import (
+    carregar_pedidos,
+    salvar_pedido,
+    exibir_historico,
+    exportar_pedidos_csv,
 )
 
 
-# ============================================
-# TESTES DE CALCULOS
-# ============================================
-
-def test_calcular_subtotal():
-    resultado = calcular_subtotal(150, 3)
-    assert resultado == 450
-
-
-def test_desconto_comum():
-    resultado = calcular_desconto(200, False)
-    assert resultado == 0.10
-
-
-def test_desconto_vip():
-    resultado = calcular_desconto(200, True)
-    assert resultado == pytest.approx(0.15)
-
-
-def test_calcular_frete():
-    assert calcular_frete(100) == 20
-    assert calcular_frete(150) == 0
-
-
-def test_calcular_total_carrinho():
-    carrinho = [
-        {"nome": "Mouse", "preco": 80, "quantidade": 2},
-        {"nome": "Teclado", "preco": 150, "quantidade": 1},
-    ]
-
-    resultado = calcular_total_carrinho(carrinho)
-
-    assert resultado == 310
-
-
-def test_calcular_pedido_vip():
-    cliente = {
-        "nome": "Teste",
-        "cliente_vip": True,
+@pytest.fixture
+def pedido_exemplo():
+    return {
+        "cliente": {
+            "nome": "Guilherme",
+            "cliente_vip": True
+        },
+        "produtos": [
+            {
+                "nome": "Notebook",
+                "preco": 2500,
+                "quantidade": 1
+            },
+            {
+                "nome": "Mouse",
+                "preco": 80,
+                "quantidade": 2
+            }
+        ],
+        "resumo": {
+            "total": 2660,
+            "percentual_desconto": 0.15,
+            "valor_desconto": 399,
+            "total_com_desconto": 2261,
+            "frete": 0,
+            "valor_final": 2261
+        }
     }
 
-    carrinho = [
-        {"nome": "Notebook", "preco": 2500, "quantidade": 1},
-    ]
 
-    pedido = calcular_pedido(carrinho, cliente)
+def test_carregar_arquivo_inexistente(tmp_path):
+    caminho = tmp_path / "pedidos.json"
 
-    assert pedido["total"] == 2500
-    assert pedido["percentual_desconto"] == pytest.approx(0.15)
-    assert pedido["valor_final"] == pytest.approx(2125)
+    assert carregar_pedidos(caminho) == []
 
 
-# ============================================
-# TESTES DE VALIDACAO
-# ============================================
+def test_salvar_pedido(tmp_path, pedido_exemplo):
+    caminho = tmp_path / "pedidos.json"
 
-def test_preco_negativo():
-    cliente = {
-        "nome": "Teste",
-        "cliente_vip": False,
-    }
+    numero = salvar_pedido(pedido_exemplo, caminho)
 
-    carrinho = [
-        {"nome": "Mouse", "preco": -10, "quantidade": 1},
-    ]
+    assert numero == 1
+    assert caminho.exists()
+
+
+def test_carregar_pedido_salvo(tmp_path, pedido_exemplo):
+    caminho = tmp_path / "pedidos.json"
+
+    salvar_pedido(pedido_exemplo, caminho)
+
+    pedidos = carregar_pedidos(caminho)
+
+    assert len(pedidos) == 1
+    assert pedidos[0]["cliente"]["nome"] == "Guilherme"
+    assert pedidos[0]["resumo"]["valor_final"] == 2261
+
+
+def test_salvar_dois_pedidos(tmp_path, pedido_exemplo):
+    caminho = tmp_path / "pedidos.json"
+
+    salvar_pedido(pedido_exemplo, caminho)
+    salvar_pedido(pedido_exemplo, caminho)
+
+    pedidos = carregar_pedidos(caminho)
+
+    assert len(pedidos) == 2
+
+
+def test_json_invalido(tmp_path):
+    caminho = tmp_path / "pedidos.json"
+    caminho.write_text("{invalido", encoding="utf-8")
 
     with pytest.raises(ValueError):
-        calcular_pedido(carrinho, cliente)
+        carregar_pedidos(caminho)
 
 
-def test_quantidade_zero():
-    cliente = {
-        "nome": "Teste",
-        "cliente_vip": False,
-    }
+def test_json_deve_ser_lista(tmp_path):
+    caminho = tmp_path / "pedidos.json"
 
-    carrinho = [
-        {"nome": "Mouse", "preco": 80, "quantidade": 0},
-    ]
-
-    with pytest.raises(ValueError):
-        calcular_pedido(carrinho, cliente)
-
-
-def test_carrinho_vazio():
-    cliente = {
-        "nome": "Teste",
-        "cliente_vip": False,
-    }
-
-    with pytest.raises(ValueError):
-        calcular_pedido([], cliente)
-
-
-# ============================================
-# TESTES DO CARRINHO
-# ============================================
-
-def test_adicionar_produto(monkeypatch):
-    carrinho = []
-
-    entradas = iter(["Mouse", "80", "2"])
-
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: next(entradas),
+    caminho.write_text(
+        json.dumps({"pedido": 1}),
+        encoding="utf-8"
     )
 
-    adicionar_produto(carrinho)
-
-    assert len(carrinho) == 1
-    assert carrinho[0]["nome"] == "Mouse"
-    assert carrinho[0]["preco"] == 80
-    assert carrinho[0]["quantidade"] == 2
+    with pytest.raises(ValueError):
+        carregar_pedidos(caminho)
 
 
-def test_remover_produto(monkeypatch):
-    carrinho = [
-        {"nome": "Notebook", "preco": 2500, "quantidade": 1},
-        {"nome": "Mouse", "preco": 80, "quantidade": 2},
-    ]
+def test_historico_vazio(tmp_path, capsys):
+    caminho = tmp_path / "pedidos.json"
 
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: "2",
-    )
-
-    remover_produto(carrinho)
-
-    assert len(carrinho) == 1
-    assert carrinho[0]["nome"] == "Notebook"
-
-
-def test_listar_carrinho_vazio(capsys):
-    listar_produtos([])
+    exibir_historico(caminho)
 
     saida = capsys.readouterr().out
 
-    assert "Carrinho vazio!" in saida
+    assert "Nenhum pedido encontrado." in saida
 
 
-def test_adicionar_preco_invalido(monkeypatch):
-    carrinho = []
+def test_exportar_csv(tmp_path, pedido_exemplo):
+    caminho_json = tmp_path / "pedidos.json"
+    caminho_csv = tmp_path / "pedidos.csv"
 
-    entradas = iter([
-        "Mouse",
-        "abc",
-        "-10",
-        "80",
-        "2",
-    ])
+    salvar_pedido(pedido_exemplo, caminho_json)
 
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: next(entradas),
+    quantidade = exportar_pedidos_csv(
+        caminho_json,
+        caminho_csv
     )
 
-    adicionar_produto(carrinho)
+    assert quantidade == 2
+    assert caminho_csv.exists()
 
-    assert len(carrinho) == 1
-    assert carrinho[0]["nome"] == "Mouse"
-    assert carrinho[0]["preco"] == 80
-    assert carrinho[0]["quantidade"] == 2
+    with open(
+        caminho_csv,
+        "r",
+        encoding="utf-8-sig",
+        newline=""
+    ) as arquivo:
+        leitor = csv.DictReader(
+            arquivo,
+            delimiter=";"
+        )
+        linhas = list(leitor)
+
+    assert len(linhas) == 2
+    assert linhas[0]["produto"] == "Notebook"
+    assert linhas[1]["produto"] == "Mouse"
 
 
-def test_remover_numero_invalido(monkeypatch):
-    carrinho = [
-        {"nome": "Mouse", "preco": 80, "quantidade": 1},
-    ]
+def test_exportar_sem_pedidos(tmp_path):
+    caminho_json = tmp_path / "pedidos.json"
+    caminho_csv = tmp_path / "pedidos.csv"
 
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: "abc",
+    quantidade = exportar_pedidos_csv(
+        caminho_json,
+        caminho_csv
     )
 
-    remover_produto(carrinho)
-
-    assert len(carrinho) == 1
-
-
-# ============================================
-# TESTES DAS FUNCOES DA AULA 6
-# ============================================
-
-def test_ler_quantidade_valida(monkeypatch):
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: "3",
-    )
-
-    resultado = ler_quantidade()
-
-    assert resultado == 3
-
-
-def test_ler_quantidade_invalida(monkeypatch):
-    entradas = iter(["abc", "0", "-2", "5"])
-
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: next(entradas),
-    )
-
-    resultado = ler_quantidade()
-
-    assert resultado == 5
-
-
-def test_ler_preco_valido(monkeypatch):
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: "100.50",
-    )
-
-    resultado = ler_preco()
-
-    assert resultado == pytest.approx(100.50)
-
-
-def test_ler_preco_invalido(monkeypatch):
-    entradas = iter(["abc", "-10", "nan", "80"])
-
-    monkeypatch.setattr(
-        "builtins.input",
-        lambda _: next(entradas),
-    )
-
-    resultado = ler_preco()
-
-    assert resultado == 80
+    assert quantidade == 0
+    assert not caminho_csv.exists()
